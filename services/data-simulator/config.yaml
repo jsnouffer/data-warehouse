@@ -1,0 +1,32 @@
+kafka:
+  brokers: localhost:29092
+  batch-size: 20000
+  topic: transactions
+
+simulation:
+  seed: 42
+  start-date: "2020-1-1"
+  stop-date: "2020-12-31"
+  min-daily-customer-count: 1100
+  max-daily-customer-count: 1150
+  weekend-customer-increase: 50
+  price-multiplier: 1.07
+  max-items-per-customer: 90
+
+logging:
+  version: 1
+  formatters:
+    simple:
+      format: "%(name)s - %(lineno)d -  %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: DEBUG
+      formatter: simple
+      stream: ext://sys.stdout
+  loggers:
+    kafka:
+      level: ERROR
+  root:
+    level: DEBUG
+    handlers: [console]

@@ -1,0 +1,10 @@
+### PYTHON ###
+venv/
+*.pyc
+*.egg-info/
+dist/
+*.tgz
+
+### VS Code ###
+.vscode/
+.project

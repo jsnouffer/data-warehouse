@@ -1,0 +1,90 @@
+version: '2.1'
+
+services:
+  mariadb:
+    image: docker.io/bitnami/mariadb:10.3
+    ports:
+      - '3306:3306'
+    volumes:
+      - 'mariadb_data:/bitnami'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    restart: always
+  phpmyadmin:
+    image: docker.io/bitnami/phpmyadmin:5
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mariadb
+    restart: always
+  zookeeper:
+    image: docker.io/bitnami/zookeeper:3.7
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper_data:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    restart: always
+  kafka:
+    image: docker.io/bitnami/kafka:2
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    hostname: kafka
+    volumes:
+      - "kafka_data:/bitnami"
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://kafka:29092
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+    depends_on:
+      - zookeeper
+    restart: always
+  # kafka-connect:
+  #   image: kafka-connect:latest
+  #   command:
+  #     - /bin/bash
+  #     - -ec
+  #     - |
+  #       /usr/bin/connect-standalone /config/connect-standalone.properties /config/mariadb-sink.properties
+  #   ports:
+  #     - "8083:8083"
+  #   volumes:
+  #     - type: bind
+  #       source: ./kafka-connect.properties
+  #       target: /config/connect-standalone.properties
+  #     - type: bind
+  #       source: ./mariadb-sink.properties
+  #       target: /config/mariadb-sink.properties
+  #     - type: bind
+  #       source: ./kafka-connect-log4j.properties
+  #       target: /opt/bitnami/kafka/config/connect-log4j.properties
+  #   depends_on:
+  #     - kafka
+  #     - mariadb
+  #   restart: always
+  akhq:
+    image: tchiotludo/akhq:latest
+    ports:
+      - "8081:8080"
+    environment:
+      - MICRONAUT_CONFIG_FILES=/app/config/application.yml
+    volumes:
+      - type: bind
+        source: ./akhq-application.yml
+        target: /app/config/application.yml
+    depends_on:
+      - kafka
+    restart: always
+
+volumes:
+  mariadb_data:
+    driver: local
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local

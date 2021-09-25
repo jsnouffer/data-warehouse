@@ -1,0 +1,29 @@
+create-new-database: true
+
+mariadb:
+  host: 127.0.0.1
+  user: root
+  database: data-warehouse
+
+kafka:
+  brokers: localhost:29092
+  group-id: data-ingest
+  topic: transactions
+
+logging:
+  version: 1
+  formatters:
+    simple:
+      format: "%(name)s - %(lineno)d -  %(message)s"
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: DEBUG
+      formatter: simple
+      stream: ext://sys.stdout
+  loggers:
+    kafka:
+      level: WARN
+  root:
+    level: DEBUG
+    handlers: [console]
