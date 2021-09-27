@@ -8,7 +8,7 @@ mariadb:
 kafka:
   brokers: localhost:29092
   group-id: data-ingest
-  topic: transactions
+  topic: transactions2
 
 logging:
   version: 1

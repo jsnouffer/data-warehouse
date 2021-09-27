@@ -1,7 +1,6 @@
 kafka:
   brokers: localhost:29092
-  batch-size: 20000
-  topic: transactions
+  topic: transactions2
 
 simulation:
   seed: 42
@@ -12,6 +11,11 @@ simulation:
   weekend-customer-increase: 50
   price-multiplier: 1.07
   max-items-per-customer: 90
+  number-of-unique-customers: 8000 # roughly based on customers per week (1150 * 7 + 50 +50 = 8150)
+  # based on customer retention stats
+  chance-regular-customer-visits: 0.9
+  chance-new-customer-becomes-regular: 0.035
+  chance-of-losing-regular-customer: 0.0004 # 0.15 / 365
 
 logging:
   version: 1

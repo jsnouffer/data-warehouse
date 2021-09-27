@@ -1,50 +1,28 @@
 import json
-import mariadb
 from dependency_injector.wiring import Provide
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, TopicPartition
 from .config import ConfigContainer, ConfigService
+from .database import Database
 
 
 def main(config: ConfigService = Provide[ConfigContainer.config_svc].provider()):
-    connection = mariadb.connect(
-        host=config.property("mariadb.host"), user=config.property("mariadb.user"), database=config.property("mariadb.database"), autocommit=True
-    )
-    cursor = connection.cursor()
-
-    if config.property("create-new-database", False):
-        cursor.execute("DROP TABLE IF EXISTS transactions")
-        cursor.execute(
-            """
-            CREATE TABLE transactions
-            (
-            transaction_id INT PRIMARY KEY auto_increment,
-            customer_id BIGINT,
-            sku INT,
-            sale_price FLOAT,
-            transaction_date DATE
-            )"""
-        )
+    database: Database = Database()
 
     consumer = KafkaConsumer(
-        config.property("kafka.topic"),
         bootstrap_servers=config.property("kafka.brokers"),
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         group_id=config.property("kafka.group-id"),
+        auto_offset_reset="earliest",
     )
-    for message in consumer:
-        transaction = message.value
-        cursor.execute(
-            "INSERT INTO transactions (customer_id, sku, sale_price, transaction_date) VALUES (?,?,?,?)",
-            (
-                transaction["customer_id"],
-                transaction["sku"],
-                transaction["sale_price"],
-                transaction["date"],
-            ),
-        )
+    tp = TopicPartition(topic=config.property("kafka.topic"), partition=0)
+    consumer.assign([tp])
+    consumer.seek(tp, 0)
 
-    cursor.close()
-    connection.close()
+    for message in consumer:
+        database.insert(message.value)
+
+    database.close()
+
 
 if __name__ == "__main__":
     main()
