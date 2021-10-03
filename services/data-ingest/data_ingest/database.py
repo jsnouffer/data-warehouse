@@ -7,14 +7,14 @@ from .config import ConfigContainer, ConfigService
 class Database(object):
     def __init__(
         self, config: ConfigService = Provide[ConfigContainer.config_svc].provider()
-    ):
-        self.connection = mariadb.connect(
+    ) -> None:
+        self.connection: mariadb.connection = mariadb.connect(
             host=config.property("mariadb.host"),
             user=config.property("mariadb.user"),
             database=config.property("mariadb.database"),
             autocommit=True,
         )
-        self.cursor = self.connection.cursor()
+        self.cursor: mariadb.connection.cursor = self.connection.cursor()
 
         if config.property("create-new-database", False):
             self.cursor.execute("DROP TABLE IF EXISTS transactions")
@@ -53,7 +53,7 @@ class Database(object):
                 """
             )
 
-            df = pd.read_csv("Products1.txt", sep="|")
+            df: pd.DataFrame = pd.read_csv("Products1.txt", sep="|")
             df.columns = df.columns.str.replace(" ", "")
             df.fillna('', inplace=True)
             df["BasePrice"] = (
@@ -74,7 +74,7 @@ class Database(object):
                     ),
                 )
 
-    def insert(self, transaction):
+    def insert(self, transaction: dict) -> None:
         self.cursor.execute(
             "INSERT INTO transactions (transaction_id, customer_id, sku, sale_price, transaction_date) VALUES (?,?,?,?,?)",
             (
@@ -86,6 +86,6 @@ class Database(object):
             ),
         )
 
-    def close(self):
+    def close(self) -> None:
         self.cursor.close()
         self.connection.close()

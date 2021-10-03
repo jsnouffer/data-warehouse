@@ -1,5 +1,6 @@
 import random
 import json
+import pandas as pd
 
 from .catalog import ProductCatalog
 from .config import ConfigContainer, ConfigService
@@ -7,6 +8,7 @@ from datetime import date, timedelta
 from dependency_injector.wiring import Provide
 from kafka import KafkaProducer
 from PyProbs import Probability as pr
+from typing import List
 
 config: ConfigService = Provide[ConfigContainer.config_svc].provider()
 
@@ -32,73 +34,64 @@ CHANCE_OF_LOSING_REGULAR_CUSTOMER = config.property(
     "simulation.chance-of-losing-regular-customer"
 )
 
-product_catalog = ProductCatalog()
-customers = set(range(1, config.property("simulation.number-of-unique-customers") + 1))
+product_catalog: ProductCatalog = ProductCatalog()
+customers: set = set(
+    range(1, config.property("simulation.number-of-unique-customers") + 1)
+)
 
 
-def buy_milk():
-    items_bought = []
+def buy_milk(purchases: List[dict]) -> List[dict]:
     if pr.Prob(0.7):
         # Should buy milk
-        milk_to_buy = product_catalog.get_random_item("MILK")
-        items_bought.append(buy_item(milk_to_buy))
+        make_purchase(purchases, "MILK")
         # Half of these people should also buy cereal
         if pr.Prob(0.5):
-            cereal_to_buy = product_catalog.get_random_item("CEREAL")
-            items_bought.append(buy_item(cereal_to_buy))
+            make_purchase(purchases, "CEREAL")
     # 5% of customers that don't buy milk will buy cereal
     elif pr.Prob(0.05):
-        cereal_to_buy = product_catalog.get_random_item("CEREAL")
-        items_bought.append(buy_item(cereal_to_buy))
-    return items_bought
+        make_purchase(purchases, "CEREAL")
+    return purchases
 
 
-def buy_baby_food():
-    items_bought = []
+def buy_baby_food(purchases: List[dict]) -> List[dict]:
     if pr.Prob(0.2):
         # Should buy baby food
-        baby_food_to_buy = product_catalog.get_random_item("BABY FOOD")
-        items_bought.append(buy_item(baby_food_to_buy))
+        make_purchase(purchases, "BABY FOOD")
         if pr.Prob(0.8):
             # Also buy diapers
-            diapers_to_buy = product_catalog.get_random_item("DIAPERS")
-            items_bought.append(buy_item(diapers_to_buy))
+            make_purchase(purchases, "DIAPERS")
     elif pr.Prob(0.01):
         # Didn't buy baby food, but should buy diapers
-        diapers_to_buy = product_catalog.get_random_item("DIAPERS")
-        items_bought.append(buy_item(diapers_to_buy))
-    return items_bought
+        make_purchase(purchases, "DIAPERS")
+    return purchases
 
 
-def buy_bread():
-    items_bought = []
+def buy_bread(purchases: List[dict]) -> List[dict]:
     if pr.Prob(0.5):
-        bread_to_buy = product_catalog.get_random_item("BREAD")
-        items_bought.append(buy_item(bread_to_buy))
-    return items_bought
+        make_purchase(purchases, "BREAD")
+    return purchases
 
 
-def buy_peanut_butter():
-    items_bought = []
+def buy_peanut_butter(purchases: List[dict]) -> List[dict]:
     if pr.Prob(0.1):
-        peanut_butter_to_buy = product_catalog.get_random_item("PEANUT BUTTER")
-        items_bought.append(buy_item(peanut_butter_to_buy))
+        make_purchase(purchases, "PEANUT BUTTER")
         if pr.Prob(0.9):
-            jelly_to_buy = product_catalog.get_random_item("JELLY/JAM")
-            items_bought.append(buy_item(jelly_to_buy))
+            make_purchase(purchases, "JELLY/JAM")
     elif pr.Prob(0.05):
-        jelly_to_buy = product_catalog.get_random_item("JELLY/JAM")
-        items_bought.append(buy_item(jelly_to_buy))
-    return items_bought
+        make_purchase(purchases, "JELLY/JAM")
+    return purchases
 
 
-def buy_item(item_bought) -> dict:
-    sale_price = round(item_bought["BasePrice"].item() * PRICE_MULTIPLIER, 2)
-    item = {
-        "sku": item_bought["SKU"].item(),
-        "sale_price": sale_price,
-    }
-    return item
+def make_purchase(purchases: List[dict], item_type: str = None) -> List[dict]:
+    item_bought: pd.DataFrame = product_catalog.find_item_to_purchase(item_type)
+    if item_bought is not None:
+        sale_price: float = round(item_bought["BasePrice"].item() * PRICE_MULTIPLIER, 2)
+        purchase = {
+            "sku": item_bought["SKU"].item(),
+            "sale_price": sale_price,
+        }
+        purchases.append(purchase)
+    return purchases
 
 
 def get_customer() -> int:
@@ -115,17 +108,26 @@ def get_customer() -> int:
     return customer
 
 
-def main():
+def main() -> None:
     current_date: date = config.date("simulation.start-date")
     stop_date: date = config.date("simulation.stop-date")
 
     transaction_id: int = 0
     while current_date <= stop_date:
-        print("DAY %s " % current_date.isoformat())
-        print("MAX %s SIZE %s" % (max(customers), len(customers)))
-        
+        product_catalog.refresh_stock(current_date)
+        print(
+            "date: {date} \t total inventory: {inv}".format(
+                date=current_date.strftime("%a, %b %d"),
+                inv=product_catalog.total_inventory(),
+            )
+        )
+
         weekday = current_date.strftime("%A")
-        increase = WEEKEND_CUSTOMER_INCREASE if weekday == 'Saturday' or weekday == 'Sunday' else 0
+        increase = (
+            WEEKEND_CUSTOMER_INCREASE
+            if weekday == "Saturday" or weekday == "Sunday"
+            else 0
+        )
 
         for _ in range(
             random.randint(
@@ -136,16 +138,15 @@ def main():
             customer_id: int = get_customer()
             transaction_id += 1
             items_bought = []
-            items_bought.extend(buy_milk())
-            items_bought.extend(buy_baby_food())
-            items_bought.extend(buy_bread())
-            items_bought.extend(buy_peanut_butter())
+            buy_milk(items_bought)
+            buy_baby_food(items_bought)
+            buy_bread(items_bought)
+            buy_peanut_butter(items_bought)
 
             for __ in range(
                 random.randint(1, MAX_ITEMS_PER_CUSTOMER - len(items_bought))
             ):
-                random_item_to_buy = product_catalog.get_random_item()
-                items_bought.append(buy_item(random_item_to_buy))
+                make_purchase(items_bought)
 
             for purchase in items_bought:
                 purchase["customer_id"] = customer_id

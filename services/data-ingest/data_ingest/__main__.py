@@ -5,16 +5,16 @@ from .config import ConfigContainer, ConfigService
 from .database import Database
 
 
-def main(config: ConfigService = Provide[ConfigContainer.config_svc].provider()):
+def main(config: ConfigService = Provide[ConfigContainer.config_svc].provider()) -> None:
     database: Database = Database()
 
-    consumer = KafkaConsumer(
+    consumer: KafkaConsumer = KafkaConsumer(
         bootstrap_servers=config.property("kafka.brokers"),
         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         group_id=config.property("kafka.group-id"),
         auto_offset_reset="earliest",
     )
-    tp = TopicPartition(topic=config.property("kafka.topic"), partition=0)
+    tp: TopicPartition = TopicPartition(topic=config.property("kafka.topic"), partition=0)
     consumer.assign([tp])
     consumer.seek(tp, 0)
 
