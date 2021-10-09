@@ -5,7 +5,7 @@ kafka:
 mariadb:
   host: 127.0.0.1
   user: root
-  database: data-warehouse
+  database: backup
   averages-table: avg_items_sold_per_day
 
 simulation:

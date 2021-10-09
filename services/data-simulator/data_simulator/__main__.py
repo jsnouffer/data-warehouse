@@ -24,20 +24,12 @@ WEEKEND_CUSTOMER_INCREASE = config.property("simulation.weekend-customer-increas
 PRICE_MULTIPLIER = config.property("simulation.price-multiplier")
 MAX_ITEMS_PER_CUSTOMER = config.property("simulation.max-items-per-customer")
 
-CHANCE_OF_REGULAR_CUSTOMER = config.property(
-    "simulation.chance-regular-customer-visits"
-)
-CHANCE_OF_KEEPING_NEW_CUSTOMER = config.property(
-    "simulation.chance-new-customer-becomes-regular"
-)
-CHANCE_OF_LOSING_REGULAR_CUSTOMER = config.property(
-    "simulation.chance-of-losing-regular-customer"
-)
+CHANCE_OF_REGULAR_CUSTOMER = config.property("simulation.chance-regular-customer-visits")
+CHANCE_OF_KEEPING_NEW_CUSTOMER = config.property("simulation.chance-new-customer-becomes-regular")
+CHANCE_OF_LOSING_REGULAR_CUSTOMER = config.property("simulation.chance-of-losing-regular-customer")
 
 product_catalog: ProductCatalog = ProductCatalog()
-customers: set = set(
-    range(1, config.property("simulation.number-of-unique-customers") + 1)
-)
+customers: set = set(range(1, config.property("simulation.number-of-unique-customers") + 1))
 
 
 def buy_milk(purchases: List[dict]) -> List[dict]:
@@ -89,6 +81,8 @@ def make_purchase(purchases: List[dict], item_type: str = None) -> List[dict]:
         purchase = {
             "sku": item_bought["SKU"].item(),
             "sale_price": sale_price,
+            "items_left": item_bought["CurrentStock"].item(),
+            "total_cases_ordered": item_bought["CasesOrdered"].item(),
         }
         purchases.append(purchase)
     return purchases
@@ -114,20 +108,19 @@ def main() -> None:
 
     transaction_id: int = 0
     while current_date <= stop_date:
+        previous_stock = product_catalog.total_inventory()
         product_catalog.refresh_stock(current_date)
+        current_stock = product_catalog.total_inventory()
         print(
-            "date: {date} \t total inventory: {inv}".format(
+            "date: {date} \t total inventory: {inv} \t deliveries: {delivery}".format(
                 date=current_date.strftime("%a, %b %d"),
-                inv=product_catalog.total_inventory(),
+                inv=current_stock,
+                delivery=current_stock - previous_stock
             )
         )
 
         weekday = current_date.strftime("%A")
-        increase = (
-            WEEKEND_CUSTOMER_INCREASE
-            if weekday == "Saturday" or weekday == "Sunday"
-            else 0
-        )
+        increase = WEEKEND_CUSTOMER_INCREASE if weekday == "Saturday" or weekday == "Sunday" else 0
 
         for _ in range(
             random.randint(
@@ -143,9 +136,7 @@ def main() -> None:
             buy_bread(items_bought)
             buy_peanut_butter(items_bought)
 
-            for __ in range(
-                random.randint(1, MAX_ITEMS_PER_CUSTOMER - len(items_bought))
-            ):
+            for __ in range(random.randint(1, MAX_ITEMS_PER_CUSTOMER - len(items_bought))):
                 make_purchase(items_bought)
 
             for purchase in items_bought:

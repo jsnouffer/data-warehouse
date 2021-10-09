@@ -45,6 +45,8 @@ class Database(object):
                     sku INT UNSIGNED NOT NULL,
                     sale_price DECIMAL(65,2) UNSIGNED NOT NULL,
                     transaction_date DATE NOT NULL,
+                    items_left INT UNSIGNED NOT NULL,
+                    total_cases_ordered INT UNSIGNED NOT NULL,
                     INDEX (transaction_id),
                     INDEX (customer_id),
                     INDEX (sku),
@@ -55,10 +57,8 @@ class Database(object):
 
             df: pd.DataFrame = pd.read_csv("Products1.txt", sep="|")
             df.columns = df.columns.str.replace(" ", "")
-            df.fillna('', inplace=True)
-            df["BasePrice"] = (
-                df["BasePrice"].replace("[\$,]", "", regex=True).astype(float)
-            )
+            df.fillna("", inplace=True)
+            df["BasePrice"] = df["BasePrice"].replace("[\$,]", "", regex=True).astype(float)
             df["itemType"] = df["itemType"].str.upper()
 
             for row in df.itertuples():
@@ -76,13 +76,15 @@ class Database(object):
 
     def insert(self, transaction: dict) -> None:
         self.cursor.execute(
-            "INSERT INTO transactions (transaction_id, customer_id, sku, sale_price, transaction_date) VALUES (?,?,?,?,?)",
+            "INSERT INTO transactions (transaction_id, customer_id, sku, sale_price, transaction_date, items_left, total_cases_ordered) VALUES (?,?,?,?,?,?,?)",
             (
                 transaction["transaction_id"],
                 transaction["customer_id"],
                 transaction["sku"],
                 transaction["sale_price"],
                 transaction["date"],
+                transaction["items_left"],
+                transaction["total_cases_ordered"],
             ),
         )
 

@@ -26,7 +26,7 @@ class Database(object):
 
         columns: list = [desc[0] for desc in self.cursor.description]
         df: pd.DataFrame = pd.DataFrame(data=self.cursor.fetchall(), columns=columns)
-        return df.astype({'SKU': 'int64'})
+        return df.astype({"SKU": "int64"})
 
     def close(self) -> None:
         self.cursor.close()
