@@ -1,9 +1,9 @@
-create-new-database: true
+create-new-database: false
 
 mariadb:
   host: 127.0.0.1
   user: root
-  database: data-warehouse
+  database: data_warehouse
 
 kafka:
   brokers: localhost:29092

@@ -10,8 +10,8 @@ mariadb:
 
 simulation:
   seed: 42
-  start-date: "2020-1-1"
-  stop-date: "2020-12-31"
+  start-date: "2021-1-1"
+  stop-date: "2021-6-30"
   min-daily-customer-count: 1100
   max-daily-customer-count: 1150
   weekend-customer-increase: 50
